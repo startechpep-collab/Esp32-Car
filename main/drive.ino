@@ -15,7 +15,7 @@
 // Forward declarations (so main.ino can see them)
 void drive(int forwardBack, int leftRight);
 void stop();
-void dance(int pause);
+void dance(int pause, int spd);
 
 void driveBegin() {
   pinMode(LEFT_IN1, OUTPUT);
@@ -72,8 +72,7 @@ void stop() {
 
 // Dance: moves around and returns to the same spot. Blocking — runs
 // the full sequence then stops. pause = ms to stop between moves.
-void dance(int pause) {
-  int spd = 100;
+void dance(int pause, int spd) {
 
   // Forward
   drive(spd, 50);
@@ -82,31 +81,31 @@ void dance(int pause) {
   delay(pause);
 
   // Spin right 360
-  drive(50, spd);
+  drive(50, 50 + spd / 2);
   delay(pause);
   stop();
   delay(pause);
 
   // Reverse
-  drive(100 - spd, 50);
+  drive(50 - spd / 2, 50);
   delay(pause);
   stop();
   delay(pause);
 
   // Spin left 360
-  drive(50, 0);
+  drive(50, 50 - spd / 2);
   delay(pause);
   stop();
   delay(pause);
 
   // Forward + right diagonal
-  drive(spd, spd);
+  drive(50 + spd / 2, 50 + spd / 2);
   delay(pause);
   stop();
   delay(pause);
 
   // Back + left diagonal (return to center)
-  drive(100 - spd, 100 - spd);
+  drive(50 - spd / 2, 50 - spd / 2);
   delay(pause);
   stop();
 }
