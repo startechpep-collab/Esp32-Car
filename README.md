@@ -105,28 +105,28 @@ void setup() {
 
 ### `drive(int forwardBack, int leftRight)`
 
-Main movement function. Both parameters are **1–100**, with **50 = center** (stop/dead zone).
+Main movement function. Both parameters are **0–100**, with **50 = center** (stop/dead zone).
 
 ```cpp
 drive(100, 50);   // full forward
-drive(1, 50);     // full reverse
+drive(0, 50);     // full reverse
 drive(50, 100);   // spin right in place
-drive(50, 1);     // spin left in place
+drive(50, 0);     // spin left in place
 drive(100, 100);  // diagonal: forward + veer right
-drive(1, 1);      // diagonal: reverse + veer left
+drive(0, 0);      // diagonal: reverse + veer left
 drive(50, 50);    // stop (coast)
 ```
 
 | forwardBack | leftRight | Result |
 |---|---|---|
 | 100 | 50 | Full forward |
-| 1 | 50 | Full reverse |
+| 0 | 50 | Full reverse |
 | 50 | 100 | Spin right in place |
-| 50 | 1 | Spin left in place |
+| 50 | 0 | Spin left in place |
 | 100 | 100 | Forward + veer right |
-| 100 | 1 | Forward + veer left |
-| 1 | 100 | Reverse + veer right |
-| 1 | 1 | Reverse + veer left |
+| 100 | 0 | Forward + veer left |
+| 0 | 100 | Reverse + veer right |
+| 0 | 0 | Reverse + veer left |
 | 50 | 50 | Stop (coast) |
 
 Commands are **non-blocking** — motors hold the last command until a new one is sent.
@@ -139,13 +139,13 @@ Hard brake. Both IN pins go HIGH on each motor, shorting the windings for instan
 stop();  // instant brake
 ```
 
-### `dance(int pause)`
+### `dance(int pause, int spd)`
 
-Runs a pre-programmed dance sequence and returns to the starting position. The `pause` parameter sets the **milliseconds** to stop between each move.
+Runs a pre-programmed dance sequence and returns to the starting position. The `pause` parameter sets the **milliseconds** to stop between each move. The `spd` parameter sets the motor speed (0–100).
 
 ```cpp
-dance(1000);  // dance with 1-second pauses between moves
-dance(500);   // faster dance with half-second pauses
+dance(1000, 100);  // dance with 1-second pauses, full speed
+dance(500, 60);    // faster dance, 60% speed
 ```
 
 The sequence:
@@ -192,9 +192,14 @@ void dance(int pause) {
 
 ## ESP32-DevKitC V2 GPIO Quick Reference
 
-### Safe to Use
+### Safe to Use (always)
 ```
-GPIO 4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33
+GPIO 13, 16, 17, 18, 19, 21, 22, 23, 32, 33
+```
+
+### Safe but ADC2 (analogRead fails when Wi-Fi is ON)
+```
+GPIO 4, 25, 26, 27
 ```
 
 ### Input Only (no output, no pull-up/down)
@@ -207,13 +212,13 @@ GPIO 34, 35, 36 (VP), 39 (VN)
 GPIO 6, 7, 8, 9, 10, 11
 ```
 
-### Boot / Strapping Pins (usable but affect boot)
+### Boot / Strapping Pins (usable but affect boot — avoid if possible)
 ```
 GPIO 0   — Boot button (must be HIGH to run firmware)
-GPIO 2   — Onboard LED on many boards (must be LOW at boot)
+GPIO 2   — Onboard LED, **used by Wi-Fi** (must be LOW at boot)
 GPIO 5   — Must be HIGH at boot
-GPIO 12  — Must be LOW at boot (HIGH can damage flash)
-GPIO 15  — Must be HIGH at boot
+GPIO 12  — **Used by Wi-Fi**, must be LOW at boot (HIGH can damage flash)
+GPIO 15  — **Used by Wi-Fi**, must be HIGH at boot
 ```
 
 ### Serial (leave free unless needed)
@@ -221,9 +226,10 @@ GPIO 15  — Must be HIGH at boot
 GPIO 1  (TX0), GPIO 3 (RX0) — used for USB serial upload
 ```
 
-### ADC2 (cannot read analog while Wi-Fi is on)
+### Avoid with Wi-Fi / Bluetooth
 ```
-GPIO 2, 4, 12, 13, 14, 15, 25, 26, 27
+GPIO 2, 12, 15 — radio/strapping shared
+ADC2 pins (2, 4, 12-15, 25-27) — analogRead() fails when Wi-Fi active
 ```
 
 ---
