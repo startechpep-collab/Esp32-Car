@@ -18,7 +18,10 @@
 // =====================================================================
 //
 // SAFE general-purpose pins (input + output, no special behavior):
-//   GPIO 4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33
+//   GPIO 13, 16, 17, 18, 19, 21, 22, 23, 32, 33
+//
+// SAFE but ADC2 (cannot read analog while Wi-Fi is ON):
+//   GPIO 4, 25, 26, 27
 //
 // INPUT-ONLY pins (no output, NO internal pull-up/down) - never for motors:
 //   GPIO 34, 35, 36 (VP), 39 (VN)
@@ -29,13 +32,15 @@
 // BOOT / STRAPPING pins (usable, but affect boot - avoid if possible,
 // keep them at their required level during power-up):
 //   GPIO 0  -> must be HIGH to run (LOW = flash mode). Has a boot button.
-//   GPIO 2  -> must be LOW/floating at boot. Onboard LED on many boards.
+//   GPIO 2  -> must be LOW/floating at boot. Onboard LED. **Used by Wi-Fi**.
 //   GPIO 5  -> must be HIGH at boot.
-//   GPIO 12 (MTDI) -> must be LOW at boot (HIGH can brick flash voltage).
-//   GPIO 15 (MTDO) -> must be HIGH at boot.
+//   GPIO 12 (MTDI) -> must be LOW at boot (HIGH can brick flash voltage). **Used by Wi-Fi**.
+//   GPIO 15 (MTDO) -> must be HIGH at boot. **Used by Wi-Fi**.
 //
 // SERIAL / programming (leave free unless you know what you're doing):
 //   GPIO 1  (TX0), GPIO 3 (RX0) - used by USB serial upload & Serial.
 //
-// ADC2 pins (2, 4, 12-15, 25-27) cannot read analog while Wi-Fi is on.
+// WIFI / BLUETOOTH pins (avoid if using wireless):
+//   GPIO 2, 12, 15 - radio/strapping shared
+//   ADC2 pins (2, 4, 12-15, 25-27) - analogRead() fails when Wi-Fi active
 // =====================================================================
