@@ -1,10 +1,10 @@
 // ================== drive.ino ==================
 // 2WD motor driver for an L298N.
 // Call driveBegin() once in setup(), then drive(forwardBack, leftRight)
-// with values 1..100 (50 = center). Example: drive(70, 70).
+// with values 0..100 (50 = center). Example: drive(70, 70).
 //
-//   forwardBack: 100 = full forward, 1 = full reverse, 50 = none
-//   leftRight:   100 = full right,   1 = full left,    50 = straight
+//   forwardBack: 100 = full forward, 0 = full reverse, 50 = none
+//   leftRight:   100 = full right,   0 = full left,    50 = straight
 //
 // Every call HOLDS until the next call. drive(50, 50) = stop.
 
@@ -47,11 +47,11 @@ void setMotor(uint8_t in1, uint8_t in2, uint8_t en, int speed) {
 
 // Main entry point. drive(70, 70) etc.
 void drive(int forwardBack, int leftRight) {
-  forwardBack = constrain(forwardBack, 1, 100);
-  leftRight = constrain(leftRight, 1, 100);
+  forwardBack = constrain(forwardBack, 0, 100);
+  leftRight = constrain(leftRight, 0, 100);
 
-  int throttle = forwardBack - JOY_CENTER; // -49..+50
-  int steer = leftRight - JOY_CENTER;      // -49..+50
+  int throttle = forwardBack - JOY_CENTER; // -50..+50
+  int steer = leftRight - JOY_CENTER;      // -50..+50
 
   int leftSpeed = constrain((throttle + steer) * 2, -100, 100);
   int rightSpeed = constrain((throttle - steer) * 2, -100, 100);
@@ -64,10 +64,10 @@ void drive(int forwardBack, int leftRight) {
 void stop() {
   digitalWrite(LEFT_IN1, HIGH);
   digitalWrite(LEFT_IN2, HIGH);
-  digitalWrite(LEFT_EN, HIGH);
+  analogWrite(LEFT_EN, 255);
   digitalWrite(RIGHT_IN1, HIGH);
   digitalWrite(RIGHT_IN2, HIGH);
-  digitalWrite(RIGHT_EN, HIGH);
+  analogWrite(RIGHT_EN, 255);
 }
 
 // Dance: moves around and returns to the same spot. Blocking — runs
@@ -82,31 +82,31 @@ void dance(int pause) {
   delay(pause);
 
   // Spin right 360
-  drive(50, 100);
+  drive(50, spd);
   delay(pause);
   stop();
   delay(pause);
 
   // Reverse
-  drive(1, 50);
+  drive(100 - spd, 50);
   delay(pause);
   stop();
   delay(pause);
 
   // Spin left 360
-  drive(50, 1);
+  drive(50, 0);
   delay(pause);
   stop();
   delay(pause);
 
   // Forward + right diagonal
-  drive(100, 100);
+  drive(spd, spd);
   delay(pause);
   stop();
   delay(pause);
 
   // Back + left diagonal (return to center)
-  drive(1, 1);
+  drive(100 - spd, 100 - spd);
   delay(pause);
   stop();
 }
