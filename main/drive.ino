@@ -17,7 +17,7 @@
 // Forward declarations (so main.ino can see them)
 void drive(int forwardBack, int leftRight);
 void stop();
-void dance(int pause, int spd);
+void dance(int pause, int spd, int repeats);
 
 void driveBegin() {
   pinMode(LEFT_IN1, OUTPUT);
@@ -79,31 +79,33 @@ void stop() {
   ledcWrite(1, 255);
 }
 
-// Dance: moves around and returns to the same spot. Blocking — runs
-// the full sequence then stops. pause = ms to stop between moves.
-void dance(int pause, int spd) {
+// Dance: forward → spin right → spin left → reverse. repeats = times to loop.
+void dance(int pause, int spd, int repeats) {
+  for (int r = 0; r < repeats; r++) {
 
-  // Forward
-  drive(spd, 50);
-  delay(pause);
-  stop();
-  delay(pause);
+    // Forward
+    drive(spd, 50);
+    delay(pause);
+    stop();
+    delay(pause);
 
-  // Spin right 360
-  drive(50, 50 + spd / 2);
-  delay(pause);
-  stop();
-  delay(pause);
+    // Spin right 360
+    drive(50, 50 + spd / 2);
+    delay(pause);
+    stop();
+    delay(pause);
 
-  // Reverse
-  drive(50 - spd / 2, 50);
-  delay(pause);
-  stop();
-  delay(pause);
+    // Spin left 360
+    drive(50, 50 - spd / 2);
+    delay(pause);
+    stop();
+    delay(pause);
 
-  // Spin left 360
-  drive(50, 50 - spd / 2);
-  delay(pause);
-  stop();
-  delay(pause);
+    // Reverse
+    drive(50 - spd / 2, 50);
+    delay(pause);
+    stop();
+    delay(pause);
+
+  }
 }

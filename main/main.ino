@@ -8,5 +8,5 @@ void setup() {
 }
 
 void loop() {
-  dance(1000, 100);
+  dance(1000, 100, 3);
 }
