@@ -5,8 +5,9 @@
 void setup() {
   Serial.begin(115200);
   driveBegin();
+  dance(1000, 100, 3);  // start non-blocking dance
 }
 
 void loop() {
-  dance(1000, 100, 3);
+  danceUpdate();
 }
