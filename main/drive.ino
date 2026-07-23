@@ -11,6 +11,8 @@
 #include "pinout.h"   // all motor pins live here
 
 #define JOY_CENTER 50
+#define PWM_FREQ 20000  // 20 kHz — above audible range, smooth motor control
+#define PWM_RES 8       // 8-bit resolution (0-255)
 
 // Forward declarations (so main.ino can see them)
 void drive(int forwardBack, int leftRight);
@@ -24,10 +26,17 @@ void driveBegin() {
   pinMode(RIGHT_IN1, OUTPUT);
   pinMode(RIGHT_IN2, OUTPUT);
   pinMode(RIGHT_EN, OUTPUT);
+
+  ledcSetup(0, PWM_FREQ, PWM_RES);
+  ledcAttachPin(LEFT_EN, 0);
+  ledcSetup(1, PWM_FREQ, PWM_RES);
+  ledcAttachPin(RIGHT_EN, 1);
+
   drive(50, 50); // start stopped
 }
 
 // Set one motor: speed -100..100 (sign = direction)
+// en = LEDC channel (0 or 1)
 void setMotor(uint8_t in1, uint8_t in2, uint8_t en, int speed) {
   speed = constrain(speed, -100, 100);
 
@@ -42,7 +51,7 @@ void setMotor(uint8_t in1, uint8_t in2, uint8_t en, int speed) {
     digitalWrite(in2, LOW);
   }
 
-  analogWrite(en, map(abs(speed), 0, 100, 0, 255));
+  ledcWrite(en, map(abs(speed), 0, 100, 0, 255));
 }
 
 // Main entry point. drive(70, 70) etc.
@@ -56,18 +65,18 @@ void drive(int forwardBack, int leftRight) {
   int leftSpeed = constrain((throttle + steer) * 2, -100, 100);
   int rightSpeed = constrain((throttle - steer) * 2, -100, 100);
 
-  setMotor(LEFT_IN1, LEFT_IN2, LEFT_EN, leftSpeed);
-  setMotor(RIGHT_IN1, RIGHT_IN2, RIGHT_EN, rightSpeed);
+  setMotor(LEFT_IN1, LEFT_IN2, 0, leftSpeed);
+  setMotor(RIGHT_IN1, RIGHT_IN2, 1, rightSpeed);
 }
 
 // Hard brake: both motor IN pins HIGH shorts the windings for instant stop.
 void stop() {
   digitalWrite(LEFT_IN1, HIGH);
   digitalWrite(LEFT_IN2, HIGH);
-  analogWrite(LEFT_EN, 255);
+  ledcWrite(0, 255);
   digitalWrite(RIGHT_IN1, HIGH);
   digitalWrite(RIGHT_IN2, HIGH);
-  analogWrite(RIGHT_EN, 255);
+  ledcWrite(1, 255);
 }
 
 // Dance: moves around and returns to the same spot. Blocking — runs
@@ -104,7 +113,7 @@ void dance(int pause, int spd) {
   stop();
   delay(pause);
 
-  // Back + left diagonal (return to center)
+  // Back + left diagonal (reverse diagonal)
   drive(50 - spd / 2, 50 - spd / 2);
   delay(pause);
   stop();

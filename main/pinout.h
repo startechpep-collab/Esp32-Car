@@ -21,7 +21,7 @@
 //   GPIO 13, 16, 17, 18, 19, 21, 22, 23, 32, 33
 //
 // SAFE but ADC2 (cannot read analog while Wi-Fi is ON):
-//   GPIO 4, 25, 26, 27
+//   GPIO 4, 14, 25, 26, 27
 //
 // INPUT-ONLY pins (no output, NO internal pull-up/down) - never for motors:
 //   GPIO 34, 35, 36 (VP), 39 (VN)
