@@ -107,14 +107,14 @@ void dance(int pause, int spd) {
   stop();
   delay(pause);
 
-  // Forward + right diagonal
-  drive(50 + spd / 2, 50 + spd / 2);
-  delay(pause);
+  // Forward + right diagonal (brief full forward)
+  drive(100, 50);
+  delay(200);
   stop();
   delay(pause);
 
-  // Back + left diagonal (reverse diagonal)
-  drive(50 - spd / 2, 50 - spd / 2);
-  delay(pause);
+  // Back + left diagonal (brief full reverse)
+  drive(0, 50);
+  delay(200);
   stop();
 }
