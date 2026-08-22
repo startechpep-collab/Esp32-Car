@@ -12,6 +12,16 @@
 #define RIGHT_IN2  33   // -> L298N IN4  (right motor direction B)
 #define RIGHT_EN   32   // -> L298N ENB  (right motor speed / PWM)
 
+// ---- Battery monitor (voltage divider on ADC1 pin) ----
+// Use GPIO 34/35/36/39 (input-only, ADC1, works with Wi-Fi)
+// Divider: 100k + 100k = /2 ratio, max 8.4V -> 4.2V at ADC
+#define BATTERY_ADC_PIN 34
+#define BATTERY_DIVIDER_RATIO 2.0f
+#define BATTERY_CUTOFF_V 6.0f  // 2S Li-ion minimum safe voltage
+
+// ---- Buzzer (passive piezo) ----
+#define BUZZER_PIN 13  // Safe GPIO, not used by Wi-Fi/motors
+
 
 // =====================================================================
 //  ESP32-DevKitC V2 (WROOM-32) PIN REFERENCE  (read before picking new pins)

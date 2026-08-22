@@ -9,5 +9,6 @@ void setup() {
 }
 
 void loop() {
+  if (!checkBattery()) return;  // stop everything if battery low
   danceUpdate();
 }

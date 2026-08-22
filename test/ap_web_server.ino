@@ -5,7 +5,7 @@
 #include <WebServer.h>
 
 const char* ssid = "ESP32_Car";
-const char* password = "12345678";
+const char* password = "esp32car2024";  // change before deploying
 
 IPAddress local_ip(192, 168, 4, 1);
 IPAddress gateway(192, 168, 4, 1);

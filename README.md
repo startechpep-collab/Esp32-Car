@@ -1,6 +1,6 @@
 # ESP32 RC Car — 2WD Motor Driver
 
-A simple, modular 2-wheel drive RC car project for the **ESP32-DevKitC V2** using an **L298N** motor driver and Arduino IDE.
+A modular 2-wheel drive RC car for **ESP32-DevKitC V2** with **L298N** motor driver, featuring acceleration ramping, progressive steering, battery monitoring, and motor overvoltage protection.
 
 ---
 
@@ -10,30 +10,48 @@ A simple, modular 2-wheel drive RC car project for the **ESP32-DevKitC V2** usin
 |---|---|
 | ESP32 | DevKitC V2 (WROOM-32) |
 | Motor driver | L298N (dual H-bridge) |
-| Motors | 2x DC gear motors (3–6V recommended) |
-| Power | Battery pack (e.g. 2x 18650 or 4xAA) |
-| Chassis | 2-wheel robot chassis |
+| Motors | 2× DC gear motors (3–6V, "TT" yellow motors) |
+| Battery | 2S Li-ion (2× 18650, 7.4V nom / 8.4V max / 6.0V min) |
+| Buck converter | LM2596 (set to **5.0V** for ESP32) |
+| Chassis | 2WD robot chassis |
 
-**Wiring diagram:**
+---
+
+## Wiring
 
 ```
-L298N Module         ESP32 DevKitC V2
-─────────────────────────────────────
-IN1          ──►     GPIO 26
-IN2          ──►     GPIO 27
-ENA          ──►     GPIO 14
-IN3          ──►     GPIO 25
-IN4          ──►     GPIO 33
-ENB          ──►     GPIO 32
-GND          ──►     GND
-
-L298N Power:
-  +12V  ◄──  Battery (+)
-  GND   ◄──  Battery (-) + ESP32 GND
-  +5V   ◄──  L298N onboard regulator (optional power for ESP32)
+BATTERY (2S Li-ion)
+   │
+   ├─(+) ──► LM2596 IN+          BATTERY (+) ──► L298N +12V
+   │                                 │
+   └─(−) ──► LM2596 IN− ──┬────── BATTERY (−) ──► L298N GND ──┬──► ESP32 GND
+                          │                                    │
+LM2596 OUT+ (5.0V) ──► ESP32 5V  ◄─────────────────────────────┘
+LM2596 OUT− ───────────► ESP32 GND
 ```
 
-> **Note:** If your motors spin the wrong direction, swap the IN1/IN2 (or IN3/IN4) values for that motor in `pinout.h`.
+### Critical Checks Before Power-On
+1. **LM2596 output = 5.0V** (measure with multimeter, no load)
+2. **L298N 5V jumper REMOVED** — don't use its onboard regulator at 7.4V input
+3. **All grounds common** — Battery −, LM2596 OUT−, L298N GND, ESP32 GND tied together
+4. **Motor wires** → L298N OUT1/2 (left), OUT3/4 (right)
+5. **Battery monitor divider** — 100k + 100k on GPIO 34 (see `pinout.h`)
+
+---
+
+## Pinout (ESP32 → L298N)
+
+| Define | GPIO | L298N Pin | Purpose |
+|---|---|---|---|
+| `LEFT_IN1` | 26 | IN1 | Left motor direction A |
+| `LEFT_IN2` | 27 | IN2 | Left motor direction B |
+| `LEFT_EN` | 14 | ENA | Left motor PWM |
+| `RIGHT_IN1` | 25 | IN3 | Right motor direction A |
+| `RIGHT_IN2` | 33 | IN4 | Right motor direction B |
+| `RIGHT_EN` | 32 | ENB | Right motor PWM |
+| `BATTERY_ADC_PIN` | 34 | — | Battery voltage divider (ADC1) |
+
+All pin definitions in `pinout.h` — change here, updates everywhere.
 
 ---
 
@@ -42,59 +60,30 @@ L298N Power:
 ```
 main/
 ├── main.ino      # Entry point — setup() and loop()
-├── drive.ino     # Motor control functions
-└── pinout.h      # Pin definitions and ESP32 GPIO reference
+├── drive.ino     # Motor control, battery monitor, safety features
+└── pinout.h      # Pin definitions + ESP32 GPIO reference
 ```
-
-### `pinout.h` — Pin Definitions
-
-All L298N pin assignments live here. Change a number and it updates everywhere.
-
-| Define | GPIO | L298N Pin | Purpose |
-|---|---|---|---|
-| `LEFT_IN1` | 26 | IN1 | Left motor direction A |
-| `LEFT_IN2` | 27 | IN2 | Left motor direction B |
-| `LEFT_EN` | 14 | ENA | Left motor speed (PWM) |
-| `RIGHT_IN1` | 25 | IN3 | Right motor direction A |
-| `RIGHT_IN2` | 33 | IN4 | Right motor direction B |
-| `RIGHT_EN` | 32 | ENB | Right motor speed (PWM) |
-
-The file also includes a full ESP32-DevKitC V2 (WROOM-32) GPIO reference listing safe pins, input-only pins, flash pins to avoid, and boot/strapping pins.
-
-### `drive.ino` — Motor Control
-
-Contains all the low-level and high-level motor functions. No pins are hardcoded here — they come from `pinout.h`.
-
-### `main.ino` — Your Code
-
-This is where you write your movement logic. The `loop()` calls functions from `drive.ino`.
 
 ---
 
-## Setup
+## Key Features
 
-1. Install [Arduino IDE](https://www.arduino.cc/en/software)
-2. Add ESP32 board support:
-   - Go to **File > Preferences**
-   - In **Additional Boards Manager URLs** add:
-     ```
-     https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-     ```
-   - Go to **Tools > Board > Boards Manager**
-   - Search for **esp32** and install **esp32 by Espressif Systems**
-3. Connect ESP32 via USB
-4. Select board: **Tools > Board > ESP32 Arduino > ESP32 Dev Module**
-5. Select the correct COM port under **Tools > Port**
-6. Open `main/main.ino`
-7. Click **Upload**
+| Feature | Description |
+|---|---|
+| **Safe stop (coast)** | `stop()` uses LOW/LOW — no H-bridge shoot-through |
+| **Dead-time** | 5µs PWM=0 before direction change — prevents shoot-through |
+| **Acceleration ramping** | Slew-rate limiter (5%/loop) — protects gears, reduces wheel slip |
+| **Progressive steering** | 1.5-power curve — gentle at low stick, full at extremes |
+| **Motor PWM limit** | `MAX_MOTOR_PWM = 80` — caps effective voltage to ~6V for 3–6V motors |
+| **Battery monitor** | Reads 2S voltage via divider on GPIO 34, emergency stop at 6.0V |
+| **millis() rollover safe** | Dance state machine handles 49-day wrap |
 
 ---
 
 ## Functions Reference
 
 ### `driveBegin()`
-
-Call once in `setup()`. Sets all motor pins to OUTPUT and stops the motors.
+Call once in `setup()`. Initializes pins, PWM channels, starts stopped.
 
 ```cpp
 void setup() {
@@ -104,18 +93,7 @@ void setup() {
 ```
 
 ### `drive(int forwardBack, int leftRight)`
-
-Main movement function. Both parameters are **0–100**, with **50 = center** (stop/dead zone).
-
-```cpp
-drive(100, 50);   // full forward
-drive(0, 50);     // full reverse
-drive(50, 100);   // spin right in place
-drive(50, 0);     // spin left in place
-drive(100, 100);  // diagonal: forward + veer right
-drive(0, 0);      // diagonal: reverse + veer left
-drive(50, 50);    // stop (coast)
-```
+Main movement. Both params **0–100**, **50 = center**.
 
 | forwardBack | leftRight | Result |
 |---|---|---|
@@ -129,108 +107,69 @@ drive(50, 50);    // stop (coast)
 | 0 | 0 | Reverse + veer left |
 | 50 | 50 | Stop (coast) |
 
-Commands are **non-blocking** — motors hold the last command until a new one is sent.
+**Non-blocking** — motors hold last command until new one.
 
 ### `stop()`
+Safe coast stop (LOW/LOW on both IN pins). Use `drive(50, 50)` for same effect.
 
-Hard brake. Both IN pins go HIGH on each motor, shorting the windings for instant stop. Faster than coasting to a stop with `drive(50, 50)`.
+### `checkBattery()`
+**Call every `loop()` iteration.** Returns `true` if battery OK, `false` if critical (triggers `stop()`).
 
 ```cpp
-stop();  // instant brake
+void loop() {
+  if (!checkBattery()) return;  // auto-stop on low battery
+  // your code here
+}
 ```
 
-### `dance(int pause, int spd)`
+### `getBatteryVoltage()`
+Returns last measured pack voltage (float, volts).
 
-Runs a pre-programmed dance sequence and returns to the starting position. The `pause` parameter sets the **milliseconds** to stop between each move. The `spd` parameter sets the motor speed (0–100).
+### `isBatteryLow()`
+Returns `true` if battery below cutoff (with hysteresis).
 
-```cpp
-dance(1000, 100);  // dance with 1-second pauses, full speed
-dance(500, 60);    // faster dance, 60% speed
-```
-
-The sequence:
-1. Forward
-2. Spin right 360°
-3. Reverse
-4. Spin left 360°
-5. Forward + right diagonal
-6. Back + left diagonal (returns to start)
-
-Each move takes `pause` ms, then stops for `pause` ms before the next move. The function is **blocking** — it runs the full sequence before returning.
-
----
-
-## Customizing the Dance
-
-Edit the `dance()` function in `drive.ino` to change the sequence. Each move is a `drive()` call + `delay()` + `stop()` block:
+### `dance(int pause, int spd, int repeats)`
+Non-blocking demo sequence. Call once to start, then `danceUpdate()` in `loop()`.
 
 ```cpp
-void dance(int pause) {
-  // Forward
-  drive(100, 50);
-  delay(pause);
-  stop();
-  delay(pause);
+void setup() {
+  driveBegin();
+  dance(1000, 100, 3);  // 1s pauses, full speed, 3 repetitions
+}
 
-  // Spin right 360
-  drive(50, 100);
-  delay(pause);
-  stop();
-  delay(pause);
-
-  // Add your own moves here
-  // ...
-
-  // Last move (no stop delay needed after the final move)
-  drive(1, 1);
-  delay(pause);
-  stop();
+void loop() {
+  if (!checkBattery()) return;
+  danceUpdate();
 }
 ```
 
 ---
 
-## ESP32-DevKitC V2 GPIO Quick Reference
+## Configuration (in `drive.ino`)
 
-### Safe to Use (always)
-```
-GPIO 13, 16, 17, 18, 19, 21, 22, 23, 32, 33
-```
-
-### Safe but ADC2 (analogRead fails when Wi-Fi is ON)
-```
-GPIO 4, 25, 26, 27
+```cpp
+#define MAX_MOTOR_PWM       80   // 0–100, limits motor voltage (80 ≈ 6V on 7.4V)
+#define MAX_ACCEL_PER_LOOP  5    // 0–100, acceleration slew rate per loop
+#define BATTERY_CUTOFF_V    6.0f // 2S Li-ion minimum safe voltage
+#define BATTERY_DIVIDER_RATIO 2.0f // 100k/100k divider = /2
 ```
 
-### Input Only (no output, no pull-up/down)
-```
-GPIO 34, 35, 36 (VP), 39 (VN)
-```
+---
 
-### Do Not Use (SPI flash — will crash)
-```
-GPIO 6, 7, 8, 9, 10, 11
-```
+## Setup (Arduino IDE)
 
-### Boot / Strapping Pins (usable but affect boot — avoid if possible)
-```
-GPIO 0   — Boot button (must be HIGH to run firmware)
-GPIO 2   — Onboard LED, **used by Wi-Fi** (must be LOW at boot)
-GPIO 5   — Must be HIGH at boot
-GPIO 12  — **Used by Wi-Fi**, must be LOW at boot (HIGH can damage flash)
-GPIO 15  — **Used by Wi-Fi**, must be HIGH at boot
-```
-
-### Serial (leave free unless needed)
-```
-GPIO 1  (TX0), GPIO 3 (RX0) — used for USB serial upload
-```
-
-### Avoid with Wi-Fi / Bluetooth
-```
-GPIO 2, 12, 15 — radio/strapping shared
-ADC2 pins (2, 4, 12-15, 25-27) — analogRead() fails when Wi-Fi active
-```
+1. Install [Arduino IDE](https://www.arduino.cc/en/software)
+2. Add ESP32 board support:
+   - File → Preferences → Additional Boards Manager URLs:
+     ```
+     https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+     ```
+   - Tools → Board → Boards Manager → search **esp32** → install **esp32 by Espressif Systems**
+3. Connect ESP32 via USB
+4. Tools → Board → ESP32 Arduino → **ESP32 Dev Module**
+5. Tools → Port → select your COM port
+6. Open `main/main.ino`
+7. Click **Upload**
 
 ---
 
@@ -238,12 +177,51 @@ ADC2 pins (2, 4, 12-15, 25-27) — analogRead() fails when Wi-Fi active
 
 | Problem | Solution |
 |---|---|
-| Motors don't spin | Check wiring, ensure L298N has power (12V + GND), check ENA/ENB jumpers are on |
-| One wheel spins wrong way | Swap IN1/IN2 (or IN3/IN4) values for that motor in `pinout.h` |
-| ESP32 resets randomly | Power supply too weak — use separate battery for motors, not just USB |
-| Motors jitter at stop | Normal for some L298N modules — `stop()` hard brake minimizes this |
-| Upload fails | Hold BOOT button on ESP32 during upload, or select correct COM port |
-| `analogWrite` not working | Ensure you have ESP32 Arduino core v2.x+ installed |
+| Motors don't spin | Check L298N power (+12V/GND), ENA/ENB jumpers ON, wiring |
+| One wheel backward | Swap IN1/IN2 (or IN3/IN4) for that motor in `pinout.h` |
+| ESP32 resets randomly | Power issue — verify LM2596 at 5.0V, common ground, battery charged |
+| Motors jitter at stop | Normal for some L298N — `stop()` coast minimizes this |
+| Battery reads wrong | Verify divider (100k/100k), measure at GPIO 34 with multimeter |
+| Upload fails | Hold BOOT button during upload, check COM port |
+| `analogRead` fails with Wi-Fi | Use ADC1 pins only (GPIO 34/35/36/39) — `pinout.h` uses 34 |
+
+---
+
+## ESP32 GPIO Quick Reference
+
+### Safe (always)
+```
+GPIO 13, 16, 17, 18, 19, 21, 22, 23, 32, 33
+```
+
+### ADC2 (no `analogRead` with Wi-Fi)
+```
+GPIO 4, 14, 25, 26, 27
+```
+
+### Input-only (no output, no pull-up/down)
+```
+GPIO 34, 35, 36 (VP), 39 (VN)
+```
+
+### Do Not Use (SPI flash)
+```
+GPIO 6, 7, 8, 9, 10, 11
+```
+
+### Boot/Strapping (affect boot — avoid)
+```
+GPIO 0  — Boot button (HIGH to run)
+GPIO 2  — Onboard LED, **Wi-Fi** (LOW at boot)
+GPIO 5  — HIGH at boot
+GPIO 12 — **Wi-Fi**, LOW at boot (HIGH damages flash)
+GPIO 15 — **Wi-Fi**, HIGH at boot
+```
+
+### Serial (leave free)
+```
+GPIO 1 (TX0), GPIO 3 (RX0)
+```
 
 ---
 
