@@ -25,11 +25,20 @@
 static int lastLeftSpeed = 0;
 static int lastRightSpeed = 0;
 
-// Forward declarations (so main.ino can see them)
+// Forward declarations
+void driveBegin();
 void drive(int forwardBack, int leftRight);
 void stop();
 void dance(int pause, int spd, int repeats);
 void danceUpdate();
+bool checkBattery();
+float getBatteryVoltage();
+bool isBatteryLow();
+void buzzerTone(uint16_t freq, uint16_t durationMs);
+void beepBoot();
+void beepLowBattery();
+void beepDanceStart();
+void beepDanceStep();
 
 // Battery monitor state
 static uint32_t lastBatteryCheck = 0;
